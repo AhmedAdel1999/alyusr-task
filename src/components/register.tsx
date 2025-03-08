@@ -1,8 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "./queryclientwrapper";
 import Spinner from 'react-bootstrap/Spinner';
 import { Formik, Form, Field , ErrorMessage } from 'formik';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import ErrorMsg from "./errormsg";
 import SuccessMsg from "./successmsg";
 import axios from "axios";
@@ -23,6 +23,18 @@ type User={
 const Register = () => {
 
     const navigate = useNavigate()
+    const {id} = useParams()
+
+    //get user
+    const {data:currentUser,isFetching:loaduser}=useQuery<User>({
+        queryKey:['getUser'],
+        queryFn:async()=>{
+            const res=await axios.get(`https://alyusrmobileapi.alyusrsoft.com/GetUserById?userId=${id}`)
+            return res.data
+
+        },
+        enabled:!!id,
+    })
 
     //add user
     const {mutate:addUser,isPending,isError,error,isSuccess}=useMutation({
@@ -44,7 +56,11 @@ const Register = () => {
 
  //submit user
   const onSubmit = async (values:any)=>{
-    addUser(values)
+    if(currentUser){
+        addUser({...values,ID:currentUser.Result.ID})
+    }else{
+        addUser(values)
+    }
   }
 
   //validation schema
@@ -63,116 +79,124 @@ const Register = () => {
         <div className="py-4 px-10 bg-[#060625] text-white text-lg">بيانات مستخدم</div>
         <div>
           {isError&& <ErrorMsg ErrMsg={error} />}
-          {isSuccess&& <SuccessMsg SuccessMsg={`User Created Successfully`}/>}
+          {isSuccess&& <SuccessMsg SuccessMsg={`User ${currentUser?"Edited":"Created"} Successfully`}/>}
         </div>
-        <Formik 
-            initialValues={{
-                User_Name:"",
-                Name:"",
-                Name_En:"",
-                Password:"",
-                IsAdmin:false,
-                rowState:1
-            }}
-            onSubmit={onSubmit}
-            validationSchema={schema}
-            >
-            <Form>
-                <div className="p-4 px-10 grid grid-cols-3 gap-8">
-                    <div className="flex gap-4">
-                        <label>اسم المستخدم:</label>
-                        <div className="flex flex-col gap-0.5 grow">
-                            <Field 
-                                type="text"
-                                name="User_Name" 
-                                placeholder="User Name" 
-                                className="border-2 border-gray-300 rounded-md p-1 w-full block"
-                            />
-                            <ErrorMessage
-                                name="User_Name" 
-                                className="text-red-600" 
-                                component="span" 
-                            />
-                        </div>
-                    </div>
 
-                    <div className="flex gap-4">
-                        <label>كلمة المرور:</label>
-                        <div className="flex flex-col gap-0.5 grow">
-                            <Field
-                                type="text" 
-                                name="Password" 
-                                placeholder="Password" 
-                                className="border-2 border-gray-300 rounded-md p-1 w-full block"
-                            />
-                            <ErrorMessage
-                                name="Password" 
-                                className="text-red-600" 
-                                component="span" 
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <label>الاسم بالعربي:</label>
-                        <div className="flex flex-col gap-0.5 grow">
-                            <Field 
-                                type="text" 
-                                name="Name" 
-                                placeholder="Arabic Name" 
-                                className="border-2 border-gray-300 rounded-md p-1 w-full block"
-                            />
-                            <ErrorMessage
-                                name="Name"
-                                className="text-red-600" 
-                                component="span" 
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <label>الاسم الاجنبي:</label>
-                        <div className="flex flex-col gap-0.5 grow">
-                            <Field 
-                                type="text" 
-                                name="Name_En" 
-                                placeholder="English Name" 
-                                className="border-2 border-gray-300 rounded-md p-1 w-full block"
-                            />
-                            <ErrorMessage
-                                name="Name_En" 
-                                component="span" 
-                                className="text-red-600" 
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 items-center">
-                        <label>مدير نظام:</label>
-                        <Field 
-                            type="checkbox" 
-                            name="IsAdmin"
-                            className="w-4 h-4" 
-                        />
-                    </div>
+        {
+            loaduser?
+                <div className="flex justify-center items-center h-[50vh]">
+                    <Spinner animation="border" variant="primary" />
                 </div>
-
-                <div className="flex justify-end gap-6 px-10">
-                <button 
-                    type="submit" 
-                    className="bg-blue-500 text-white flex items-center gap-2 py-2 px-6 rounded-md"
+                :
+            <Formik 
+                initialValues={{
+                    User_Name:currentUser?.Result.User_Name||"",
+                    Name:currentUser?.Result.Name||"",
+                    Name_En:currentUser?.Result.Name_En||"",
+                    Password:"",
+                    IsAdmin:currentUser?.Result.IsAdmin || false,
+                    rowState:currentUser?2:1
+                }}
+                onSubmit={onSubmit}
+                validationSchema={schema}
                 >
-                    <span>حفظ</span>
-                    {
-                        isPending&&
-                        <Spinner animation="border" size="sm" />
-                        
-                    }
-                </button>
-                <button type="reset" className="bg-red-500 text-white py-2 px-6 rounded-md">إلغاء</button>
-                </div>
-            </Form>
-        </Formik>
+                <Form>
+                    <div className="p-4 px-10 grid grid-cols-3 gap-8">
+                        <div className="flex gap-4">
+                            <label>اسم المستخدم:</label>
+                            <div className="flex flex-col gap-0.5 grow">
+                                <Field 
+                                    type="text"
+                                    name="User_Name" 
+                                    placeholder="User Name" 
+                                    className="input-field"
+                                />
+                                <ErrorMessage
+                                    name="User_Name" 
+                                    className="text-red-600" 
+                                    component="span" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <label>كلمة المرور:</label>
+                            <div className="flex flex-col gap-0.5 grow">
+                                <Field
+                                    type="text" 
+                                    name="Password" 
+                                    placeholder="Password" 
+                                    className="input-field"
+                                />
+                                <ErrorMessage
+                                    name="Password" 
+                                    className="text-red-600" 
+                                    component="span" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <label>الاسم بالعربي:</label>
+                            <div className="flex flex-col gap-0.5 grow">
+                                <Field 
+                                    type="text" 
+                                    name="Name" 
+                                    placeholder="Arabic Name" 
+                                    className="input-field"
+                                />
+                                <ErrorMessage
+                                    name="Name"
+                                    className="text-red-600" 
+                                    component="span" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <label>الاسم الاجنبي:</label>
+                            <div className="flex flex-col gap-0.5 grow">
+                                <Field 
+                                    type="text" 
+                                    name="Name_En" 
+                                    placeholder="English Name" 
+                                    className="input-field"
+                                />
+                                <ErrorMessage
+                                    name="Name_En" 
+                                    component="span" 
+                                    className="text-red-600" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 items-center">
+                            <label>مدير نظام:</label>
+                            <Field 
+                                type="checkbox" 
+                                name="IsAdmin"
+                                className="w-4 h-4" 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-6 px-10">
+                    <button 
+                        type="submit" 
+                        className="bg-blue-500 text-white flex items-center gap-2 py-2 px-6 rounded-md"
+                    >
+                        <span>حفظ</span>
+                        {
+                            isPending&&
+                            <Spinner animation="border" size="sm" />
+                            
+                        }
+                    </button>
+                    <button type="reset" className="bg-red-500 text-white py-2 px-6 rounded-md">إلغاء</button>
+                    </div>
+                </Form>
+            </Formik>
+        }
     </div>
   );
 }

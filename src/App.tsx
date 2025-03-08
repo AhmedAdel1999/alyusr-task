@@ -1,7 +1,6 @@
 import { Route, Routes,BrowserRouter } from "react-router-dom";
 import Register from "./components/register";
 import UsersList from "./components/userslist";
-import EditUser from "./components/edituser";
 
 function App() {
   return (
@@ -9,7 +8,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Register />} />
-          <Route path="/:id" element={<EditUser />} />
+          <Route path="/:id" element={<Register />} />
           <Route path="/users" element={<UsersList />} />
         </Routes>
       </BrowserRouter>
